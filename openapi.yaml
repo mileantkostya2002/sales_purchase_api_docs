@@ -561,3 +561,202 @@ paths:
                       name: "Laptop"
                       default_code: "LT-001"
                       list_price: 1000
+  /api/sales/my-orders:
+    get:
+      tags: [ Sales Orders ]
+      summary: Get all Sales Orders for the authenticated employee
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, example: 20 }
+          description: Number of records to return (default 100)
+        - in: query
+          name: offset
+          schema: { type: integer, example: 0 }
+          description: Pagination offset
+        - in: query
+          name: state
+          schema: { type: string, example: "sale" }
+          description: Filter by state (draft, sent, sale, done, cancel)
+        - in: query
+          name: search
+          schema: { type: string, example: "SO" }
+          description: Search by order name or partner name
+        - in: query
+          name: date_from
+          schema: { type: string, format: date, example: "2025-01-01" }
+          description: Filter orders created from this date
+        - in: query
+          name: date_to
+          schema: { type: string, format: date, example: "2025-12-31" }
+          description: Filter orders created until this date
+      responses:
+        "200":
+          description: Successful response with a list of Sales Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  employee: { type: string, example: "John Smith" }
+                  partner_id: { type: integer, example: 7 }
+                  total_count: { type: integer, example: 42 }
+                  stats:
+                    type: object
+                    properties:
+                      draft: { type: integer, example: 2 }
+                      sent: { type: integer, example: 3 }
+                      sale: { type: integer, example: 10 }
+                      done: { type: integer, example: 5 }
+                      cancel: { type: integer, example: 1 }
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+        "400":
+          description: Invalid parameter or employee without partner
+        "500":
+          description: Internal server error
+
+    /api/purchase/my-orders:
+      get:
+        tags: [ Purchase Orders ]
+        summary: Get all Purchase Orders for the authenticated employee
+        security:
+          - bearerAuth: [ ]
+        parameters:
+          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/0'
+          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/1'
+          - in: query
+            name: state
+            schema: { type: string, example: "purchase" }
+            description: Filter by state (draft, sent, to approve, purchase, done, cancel)
+          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/3'
+          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/4'
+          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/5'
+        responses:
+          "200":
+            description: Successful response with Purchase Orders list
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    success: { type: boolean, example: true }
+                    employee: { type: string, example: "John Smith" }
+                    partner_id: { type: integer, example: 7 }
+                    total_count: { type: integer, example: 15 }
+                    stats:
+                      type: object
+                      properties:
+                        draft: { type: integer, example: 1 }
+                        purchase: { type: integer, example: 7 }
+                        done: { type: integer, example: 2 }
+                    orders:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Order'
+          "400":
+            description: Invalid parameter or employee without partner
+          "500":
+            description: Internal server error
+
+    /api/sales/{order_id}:
+      get:
+        tags: [ Sales Orders ]
+        summary: Get a specific Sales Order by ID
+        security:
+          - bearerAuth: [ ]
+        parameters:
+          - name: order_id
+            in: path
+            required: true
+            schema: { type: integer, example: 42 }
+            description: ID of the Sales Order
+        responses:
+          "200":
+            description: Successful retrieval of Sales Order
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    success: { type: boolean, example: true }
+                    order:
+                      $ref: '#/components/schemas/Order'
+          "404":
+            description: Sales Order not found
+          "500":
+            description: Internal server error
+
+    /api/purchase/{order_id}:
+      get:
+        tags: [ Purchase Orders ]
+        summary: Get a specific Purchase Order by ID
+        security:
+          - bearerAuth: [ ]
+        parameters:
+          - name: order_id
+            in: path
+            required: true
+            schema: { type: integer, example: 42 }
+            description: ID of the Purchase Order
+        responses:
+          "200":
+            description: Successful retrieval of Purchase Order
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    success: { type: boolean, example: true }
+                    order:
+                      $ref: '#/components/schemas/Order'
+          "404":
+            description: Purchase Order not found
+          "500":
+            description: Internal server error
+
+    /api/sales/create:
+      post:
+        tags: [ Sales Orders ]
+        summary: Create a new Sales Order
+        security:
+          - bearerAuth: [ ]
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  note:
+                    type: string
+                    example: "Please deliver before 5 PM"
+                  client_order_ref:
+                    type: string
+                    example: "Customer Reference #123"
+                  order_lines:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderLine'
+        responses:
+          "201":
+            description: Sales Order created successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    success: { type: boolean, example: true }
+                    order:
+                      $ref: '#/components/schemas/Order'
+          "400":
+            description: Invalid input or missing required fields
+          "404":
+            description: Product or Unit of Measure not found
+          "500":
+            description: Internal server error
