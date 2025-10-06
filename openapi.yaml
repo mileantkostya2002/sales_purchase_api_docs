@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Odoo Mobile API
+  title: Odoo Sales/Order API
   version: 1.0.0
   description: API for managing Sales Orders, Purchase Orders, Products, Units of Measure, and Categories in Odoo.
 
@@ -530,6 +530,71 @@ paths:
                   note: "Please deliver before 5 PM"
                   client_order_ref: "NEW-REF-123"
 
+  paths:
+  /api/sales/{order_id}:
+    get:
+      tags: [Sales Orders]
+      summary: Get a specific Sales Order by ID
+      description: |
+        Retrieve a sales order by its ID.
+        Employee must be authenticated via API token.
+
+        **Authorization:** Bearer JWT token required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the Sales Order to retrieve
+      responses:
+        '200':
+          description: Successful retrieval of Sales Order
+          content:
+            application/json:
+              example:
+                success: true
+                order:
+                  id: 201
+                  name: "SO0001"
+                  partner_id: 7
+                  partner: "John Doe"
+                  amount_untaxed: 800
+                  amount_tax: 160
+                  amount_total: 960
+                  state: "sale"
+                  date_order: "2025-10-06T12:00:00"
+                  note: "Please deliver before 5 PM"
+                  client_order_ref: "Customer Reference #123"
+                order_lines:
+                  - display_type: "line_section"
+                    name: "Section Title - Hardware"
+                    sequence: 1
+                  - product_id: 42
+                    product_name: "Laptop"
+                    quantity: 2
+                    product_uom: "Units"
+                    product_uom_id: 1
+                    price_unit: 400
+                    subtotal: 800
+                    total: 960
+                    sequence: 2
+        '404':
+          description: Sales Order not found
+          content:
+            application/json:
+              example:
+                error: "Sales Order with id 42 not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              example:
+                error: "Internal server error: <details>"
+
+  
   /api/sales/{order_id}/update:
     put:
       tags: [Sales Orders]
