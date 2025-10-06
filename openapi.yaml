@@ -101,7 +101,7 @@ components:
         parent_id: { type: integer, nullable: true }
         parent_name: { type: string, nullable: true }
         product_count: { type: integer }
-        children: 
+        children:
           type: array
           items:
             $ref: '#/components/schemas/Category'
@@ -169,6 +169,187 @@ paths:
                     subtotal: 500
                     total: 600
                     sequence: 2
+
+  /purchase/my-orders:
+    get:
+      tags: [ Purchase Orders ]
+      summary: Get all Purchase Orders for the authenticated employee
+      description: |
+        Returns all purchase orders created by the authenticated employee. 
+        Supports pagination, filtering by state, search by name/partner, and date range.
+
+        **Query parameters (optional):**
+        - `limit`: number of records to return (default: 100)
+        - `offset`: pagination offset (default: 0)
+        - `state`: filter by state (`draft`, `sent`, `to approve`, `purchase`, `done`, `cancel`)
+        - `search`: search by order name or partner name
+        - `date_from`: filter orders from this date (`YYYY-MM-DD`)
+        - `date_to`: filter orders until this date (`YYYY-MM-DD`)
+
+        **Authorization:** Bearer JWT token required.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Maximum number of records to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [ draft, sent, to approve, purchase, done, cancel ]
+          description: Filter by order state
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by order name or partner name
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter orders created from this date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter orders created until this date
+      responses:
+        '200':
+          description: Successful response with a list of Purchase Orders
+          content:
+            application/json:
+              example:
+                success: true
+                employee: "John Smith"
+                partner_id: 7
+                total_count: 15
+                limit: 20
+                offset: 0
+                stats:
+                  draft: 1
+                  sent: 0
+                  to approve: 2
+                  purchase: 7
+                  done: 2
+                  cancel: 0
+                orders:
+                  - id: 101
+                    name: "PO0001"
+                    partner: "John Doe"
+                    date_order: "2025-10-06T10:00:00"
+                    date_approve: "2025-10-07T10:00:00"
+                    state: "purchase"
+                    state_label: "Purchase"
+                    amount_untaxed: 1000
+                    amount_tax: 200
+                    amount_total: 1200
+                    currency: "USD"
+                    responsible: "Employee Name"
+                    order_line_count: 2
+                    order_lines:
+                      - product_id: 42
+                        product_name: "Steel"
+                        quantity: 10
+                        product_uom: "Units"
+                        price_unit: 50
+                        subtotal: 500
+                        total: 600
+                      - product_id: 50
+                        product_name: "Copper"
+                        quantity: 5
+                        product_uom: "Units"
+                        price_unit: 50
+                        subtotal: 250
+                        total: 300
+        '400':
+          description: Invalid parameter or employee without partner
+          content:
+            application/json:
+              example:
+                error: "Employee does not have an associated partner"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              example:
+                error: "Internal server error: <details>"
+
+  /api/purchase/{order_id}:
+    get:
+      tags: [ Purchase Orders ]
+      summary: Get a specific Purchase Order by ID
+      description: |
+        Retrieve a purchase order by its ID.
+        Employee must be authenticated via API token.
+        
+        **Authorization:** Bearer JWT token required.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the Purchase Order to retrieve
+      responses:
+        '200':
+          description: Successful retrieval of Purchase Order
+          content:
+            application/json:
+              example:
+                success: true
+                order:
+                  id: 101
+                  name: "PO0001"
+                  partner_id: 7
+                  partner: "John Doe"
+                  amount_untaxed: 1000
+                  amount_tax: 200
+                  amount_total: 1200
+                  state: "purchase"
+                  date_order: "2025-10-06T10:00:00"
+                  responsible: "Employee Name"
+                  responsible_id: 3
+                  note: "Urgent delivery needed"
+                order_lines:
+                  - display_type: "line_section"
+                    name: "Raw Materials"
+                    sequence: 1
+                  - product_id: 42
+                    product_name: "Steel"
+                    quantity: 10
+                    product_uom: "Units"
+                    product_uom_id: 1
+                    price_unit: 50
+                    subtotal: 500
+                    total: 600
+                    sequence: 2
+        '404':
+          description: Purchase Order not found
+          content:
+            application/json:
+              example:
+                error: "Purchase Order with id 42 not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              example:
+                error: "Internal server error: <details>"
+
 
   /api/purchase/{order_id}/update:
     put:
