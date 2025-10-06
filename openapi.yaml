@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Odoo Mobile API
   version: 1.0.0
-  description: API for managing Sales Orders, Purchase Orders, Products, UoM, and Categories in Odoo.
+  description: API for managing Sales Orders, Purchase Orders, Products, Units of Measure, and Categories in Odoo.
 
 servers:
   - url: https://your-odoo-domain.com
@@ -34,25 +34,90 @@ components:
         product_uom:
           type: integer
       example:
-        - display_type: line_section
-          name: "Raw Materials"
-        - product_id: 42
-          quantity: 10
-          product_uom: 1
-        - display_type: line_note
-          name: "Quality certificate required"
-        - product_id: 50
-          quantity: 5
-          product_uom: 1
+        display_type: line_section
+        name: "Raw Materials"
+        product_id: 42
+        quantity: 10
+        product_uom: 1
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        partner:
+          type: string
+        state:
+          type: string
+        amount_untaxed:
+          type: number
+        amount_tax:
+          type: number
+        amount_total:
+          type: number
+        note:
+          type: string
+        client_order_ref:
+          type: string
+        updated_by:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        default_code: { type: string }
+        list_price: { type: number }
+        standard_price: { type: number }
+        uom_id: { type: integer }
+        uom_name: { type: string }
+        categ_id: { type: integer }
+        categ_name: { type: string }
+        barcode: { type: string }
+        active: { type: boolean }
+        qty_available: { type: number }
+
+    UoM:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        category_id: { type: integer }
+        category_name: { type: string }
+        uom_type: { type: string }
+        ratio: { type: number }
+        rounding: { type: number }
+        active: { type: boolean }
+
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        complete_name: { type: string }
+        parent_id: { type: integer, nullable: true }
+        parent_name: { type: string, nullable: true }
+        product_count: { type: integer }
+        children: 
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        sample_products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
 
 paths:
 
+  # ------------------ PURCHASE ORDERS ------------------
+
   /api/purchase/create:
     post:
-      tags:
-        - Purchase Orders
+      tags: [Purchase Orders]
       summary: Create a Purchase Order
-      description: Create a purchase order for the authenticated employee.
       security:
         - bearerAuth: []
       requestBody:
@@ -62,26 +127,19 @@ paths:
             schema:
               type: object
               properties:
-                note:
-                  type: string
+                note: { type: string }
                 order_lines:
                   type: array
                   items:
                     $ref: '#/components/schemas/OrderLine'
-              required:
-                - order_lines
+              required: [order_lines]
               example:
                 note: "Urgent delivery needed"
                 order_lines:
                   - display_type: line_section
                     name: "Raw Materials"
-                  - product_id: 42
+                    product_id: 42
                     quantity: 10
-                    product_uom: 1
-                  - display_type: line_note
-                    name: "Quality certificate required"
-                  - product_id: 50
-                    quantity: 5
                     product_uom: 1
       responses:
         '201':
@@ -98,9 +156,6 @@ paths:
                   amount_tax: 200.0
                   amount_total: 1200.0
                   state: "draft"
-                  date_order: "2025-10-06T10:00:00"
-                  created_by: "Employee Name"
-                  responsible: "User Name"
                   note: "Urgent delivery needed"
                 order_lines:
                   - display_type: line_section
@@ -117,16 +172,13 @@ paths:
 
   /api/purchase/{order_id}/update:
     put:
-      tags:
-        - Purchase Orders
+      tags: [Purchase Orders]
       summary: Update a Purchase Order
-      description: Update a purchase order in draft state. Replaces all order lines.
       parameters:
         - name: order_id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
       security:
         - bearerAuth: []
       requestBody:
@@ -136,8 +188,7 @@ paths:
             schema:
               type: object
               properties:
-                note:
-                  type: string
+                note: { type: string }
                 order_lines:
                   type: array
                   items:
@@ -147,14 +198,9 @@ paths:
                 order_lines:
                   - display_type: line_section
                     name: "Updated Raw Materials"
-                  - product_id: 42
+                    product_id: 42
                     quantity: 10
                     product_uom: 2
-                  - display_type: line_note
-                    name: "Certificate required"
-                  - product_id: 50
-                    quantity: 5
-                    product_uom: 1
       responses:
         '200':
           description: Purchase Order updated
@@ -186,16 +232,13 @@ paths:
 
   /api/purchase/{order_id}/confirm:
     post:
-      tags:
-        - Purchase Orders
+      tags: [Purchase Orders]
       summary: Confirm a Purchase Order
-      description: Confirm a purchase order (draft → purchase) and set is_mobile_report=True.
       parameters:
         - name: order_id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
       security:
         - bearerAuth: []
       responses:
@@ -215,18 +258,57 @@ paths:
                   confirmed_by: "Employee Name"
                   is_mobile_report: true
 
-  /api/sales/{order_id}/update:
-    put:
-      tags:
-        - Sales Orders
-      summary: Update a Sales Order
-      description: Update a sales order in draft state. Replaces all order lines.
+  /api/purchase/my-orders:
+    get:
+      tags: [Purchase Orders]
+      summary: Get all Purchase Orders for the authenticated employee
+      security:
+        - bearerAuth: []
       parameters:
-        - name: order_id
-          in: path
-          required: true
-          schema:
-            type: integer
+        - in: query
+          name: limit
+          schema: { type: integer, example: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, example: 0 }
+        - in: query
+          name: state
+          schema: { type: string, example: "purchase" }
+        - in: query
+          name: search
+          schema: { type: string, example: "PO" }
+        - in: query
+          name: date_from
+          schema: { type: string, format: date, example: "2025-01-01" }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date, example: "2025-12-31" }
+      responses:
+        '200':
+          description: List of Purchase Orders
+          content:
+            application/json:
+              example:
+                success: true
+                employee: "John Smith"
+                total_count: 15
+                stats:
+                  draft: 1
+                  purchase: 7
+                  done: 2
+                orders:
+                  - id: 101
+                    name: "PO0001"
+                    partner: "John Doe"
+                    state: "purchase"
+                    amount_total: 1200.0
+
+  # ------------------ SALES ORDERS ------------------
+
+  /api/sales/create:
+    post:
+      tags: [Sales Orders]
+      summary: Create a Sales Order
       security:
         - bearerAuth: []
       requestBody:
@@ -236,10 +318,57 @@ paths:
             schema:
               type: object
               properties:
-                note:
-                  type: string
-                client_order_ref:
-                  type: string
+                note: { type: string }
+                client_order_ref: { type: string }
+                order_lines:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OrderLine'
+              example:
+                note: "Please deliver before 5 PM"
+                client_order_ref: "NEW-REF-123"
+                order_lines:
+                  - display_type: line_section
+                    name: "Section A"
+                    product_id: 42
+                    quantity: 5
+                    product_uom: 1
+      responses:
+        '201':
+          description: Sales Order created
+          content:
+            application/json:
+              example:
+                success: true
+                order:
+                  id: 201
+                  name: "SO0001"
+                  partner: "John Doe"
+                  state: "draft"
+                  amount_total: 800.0
+                  note: "Please deliver before 5 PM"
+                  client_order_ref: "NEW-REF-123"
+
+  /api/sales/{order_id}/update:
+    put:
+      tags: [Sales Orders]
+      summary: Update a Sales Order
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: integer }
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string }
+                client_order_ref: { type: string }
                 order_lines:
                   type: array
                   items:
@@ -250,13 +379,8 @@ paths:
                 order_lines:
                   - display_type: line_section
                     name: "Updated Section"
-                  - product_id: 42
+                    product_id: 42
                     quantity: 5
-                    product_uom: 1
-                  - display_type: line_note
-                    name: "Handle with care"
-                  - product_id: 50
-                    quantity: 2
                     product_uom: 1
       responses:
         '200':
@@ -275,31 +399,16 @@ paths:
                   note: "Updated delivery instructions"
                   client_order_ref: "NEW-REF-123"
                   updated_by: "Employee Name"
-                order_lines:
-                  - display_type: line_section
-                    name: "Updated Section"
-                    sequence: 1
-                  - product_id: 42
-                    product_name: "Laptop"
-                    quantity: 5
-                    product_uom: "Units"
-                    price_unit: 100
-                    subtotal: 500
-                    total: 550
-                    sequence: 2
 
   /api/sales/{order_id}/confirm:
     post:
-      tags:
-        - Sales Orders
+      tags: [Sales Orders]
       summary: Confirm a Sales Order
-      description: Confirm a sales order (draft/sent → sale) and set is_mobile_report=True.
       parameters:
         - name: order_id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
       security:
         - bearerAuth: []
       responses:
@@ -316,34 +425,74 @@ paths:
                   partner: "John Doe"
                   state: "sale"
                   amount_total: 800.0
-                  confirmation_date: "2025-10-06T12:00:00"
                   confirmed_by: "Employee Name"
                   is_mobile_report: true
 
+  /api/sales/my-orders:
+    get:
+      tags: [Sales Orders]
+      summary: Get all Sales Orders for the authenticated employee
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, example: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, example: 0 }
+        - in: query
+          name: state
+          schema: { type: string, example: "sale" }
+        - in: query
+          name: search
+          schema: { type: string, example: "SO" }
+        - in: query
+          name: date_from
+          schema: { type: string, format: date, example: "2025-01-01" }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date, example: "2025-12-31" }
+      responses:
+        '200':
+          description: List of Sales Orders
+          content:
+            application/json:
+              example:
+                success: true
+                employee: "John Smith"
+                total_count: 42
+                stats:
+                  draft: 2
+                  sent: 3
+                  sale: 10
+                  done: 5
+                  cancel: 1
+                orders:
+                  - id: 201
+                    name: "SO0001"
+                    partner: "John Doe"
+                    state: "sale"
+                    amount_total: 800.0
+
+  # ------------------ PRODUCTS ------------------
+
   /api/products:
     get:
-      tags:
-        - Products
+      tags: [Products]
       summary: Get all products
-      description: Get a list of all saleable products.
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
-          schema:
-            type: integer
-          example: 50
+          schema: { type: integer, example: 50 }
         - name: offset
           in: query
-          schema:
-            type: integer
-          example: 0
+          schema: { type: integer, example: 0 }
         - name: search
           in: query
-          schema:
-            type: string
-          example: "laptop"
-      security:
-        - bearerAuth: []
+          schema: { type: string, example: "laptop" }
       responses:
         '200':
           description: List of products
@@ -352,8 +501,6 @@ paths:
               example:
                 success: true
                 total_count: 100
-                limit: 50
-                offset: 0
                 products:
                   - id: 42
                     name: "Laptop"
@@ -370,16 +517,13 @@ paths:
 
   /api/products/{product_id}/image:
     get:
-      tags:
-        - Products
+      tags: [Products]
       summary: Get product image
-      description: Returns binary image data for a product.
       parameters:
         - name: product_id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
         - name: size
           in: query
           schema:
@@ -394,16 +538,13 @@ paths:
 
   /api/products/{product_id}/image-info:
     get:
-      tags:
-        - Products
+      tags: [Products]
       summary: Get product image info (base64)
-      description: Returns product image as base64 with metadata.
       parameters:
         - name: product_id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
         - name: size
           in: query
           schema:
@@ -427,30 +568,24 @@ paths:
                 image_format: "image/png"
                 image_url: "/api/products/42/image?size=medium"
 
+  # ------------------ UNITS OF MEASURE ------------------
+
   /api/uom:
     get:
-      tags:
-        - Units of Measure
+      tags: [Units of Measure]
       summary: Get all UoMs
-      description: Get all active units of measure.
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
-          schema:
-            type: integer
-          example: 50
+          schema: { type: integer, example: 50 }
         - name: offset
           in: query
-          schema:
-            type: integer
-          example: 0
+          schema: { type: integer, example: 0 }
         - name: search
           in: query
-          schema:
-            type: string
-          example: "kg"
-      security:
-        - bearerAuth: []
+          schema: { type: string, example: "kg" }
       responses:
         '200':
           description: List of UoMs
@@ -459,8 +594,6 @@ paths:
               example:
                 success: true
                 total_count: 10
-                limit: 50
-                offset: 0
                 uoms:
                   - id: 1
                     name: "Units"
@@ -471,35 +604,27 @@ paths:
                     rounding: 0.01
                     active: true
 
+  # ------------------ PRODUCT CATEGORIES ------------------
+
   /api/product/categories:
     get:
-      tags:
-        - Product Categories
+      tags: [Product Categories]
       summary: Get product categories
-      description: Get list of product categories with optional parent filtering.
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
-          schema:
-            type: integer
-          example: 50
+          schema: { type: integer, example: 50 }
         - name: offset
           in: query
-          schema:
-            type: integer
-          example: 0
+          schema: { type: integer, example: 0 }
         - name: search
           in: query
-          schema:
-            type: string
-          example: "electronics"
+          schema: { type: string, example: "electronics" }
         - name: parent_id
           in: query
-          schema:
-            type: string
-          example: "false"
-      security:
-        - bearerAuth: []
+          schema: { type: string, example: "false" }
       responses:
         '200':
           description: List of categories
@@ -508,30 +633,21 @@ paths:
               example:
                 success: true
                 total_count: 5
-                limit: 50
-                offset: 0
                 categories:
                   - id: 1
                     name: "Electronics"
                     complete_name: "Electronics"
-                    parent_id: null
-                    parent_name: null
                     product_count: 10
-                    child_count: 2
-                    child_ids: [2,3]
 
   /api/product/categories/{category_id}:
     get:
-      tags:
-        - Product Categories
+      tags: [Product Categories]
       summary: Get a single product category
-      description: Get detailed information about a specific category.
       parameters:
         - name: category_id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
       security:
         - bearerAuth: []
       responses:
@@ -545,218 +661,4 @@ paths:
                   id: 1
                   name: "Electronics"
                   complete_name: "Electronics"
-                  parent_id: null
-                  parent_name: null
-                  path:
-                    - id: 1
-                      name: "Electronics"
                   product_count: 10
-                  children:
-                    - id: 2
-                      name: "Phones"
-                      complete_name: "Electronics / Phones"
-                      product_count: 5
-                  sample_products:
-                    - id: 42
-                      name: "Laptop"
-                      default_code: "LT-001"
-                      list_price: 1000
-  /api/sales/my-orders:
-    get:
-      tags: [ Sales Orders ]
-      summary: Get all Sales Orders for the authenticated employee
-      security:
-        - bearerAuth: [ ]
-      parameters:
-        - in: query
-          name: limit
-          schema: { type: integer, example: 20 }
-          description: Number of records to return (default 100)
-        - in: query
-          name: offset
-          schema: { type: integer, example: 0 }
-          description: Pagination offset
-        - in: query
-          name: state
-          schema: { type: string, example: "sale" }
-          description: Filter by state (draft, sent, sale, done, cancel)
-        - in: query
-          name: search
-          schema: { type: string, example: "SO" }
-          description: Search by order name or partner name
-        - in: query
-          name: date_from
-          schema: { type: string, format: date, example: "2025-01-01" }
-          description: Filter orders created from this date
-        - in: query
-          name: date_to
-          schema: { type: string, format: date, example: "2025-12-31" }
-          description: Filter orders created until this date
-      responses:
-        "200":
-          description: Successful response with a list of Sales Orders
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  employee: { type: string, example: "John Smith" }
-                  partner_id: { type: integer, example: 7 }
-                  total_count: { type: integer, example: 42 }
-                  stats:
-                    type: object
-                    properties:
-                      draft: { type: integer, example: 2 }
-                      sent: { type: integer, example: 3 }
-                      sale: { type: integer, example: 10 }
-                      done: { type: integer, example: 5 }
-                      cancel: { type: integer, example: 1 }
-                  orders:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Order'
-        "400":
-          description: Invalid parameter or employee without partner
-        "500":
-          description: Internal server error
-
-    /api/purchase/my-orders:
-      get:
-        tags: [ Purchase Orders ]
-        summary: Get all Purchase Orders for the authenticated employee
-        security:
-          - bearerAuth: [ ]
-        parameters:
-          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/0'
-          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/1'
-          - in: query
-            name: state
-            schema: { type: string, example: "purchase" }
-            description: Filter by state (draft, sent, to approve, purchase, done, cancel)
-          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/3'
-          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/4'
-          - $ref: '#/paths/~1api~1sales~1my-orders/get/parameters/5'
-        responses:
-          "200":
-            description: Successful response with Purchase Orders list
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    success: { type: boolean, example: true }
-                    employee: { type: string, example: "John Smith" }
-                    partner_id: { type: integer, example: 7 }
-                    total_count: { type: integer, example: 15 }
-                    stats:
-                      type: object
-                      properties:
-                        draft: { type: integer, example: 1 }
-                        purchase: { type: integer, example: 7 }
-                        done: { type: integer, example: 2 }
-                    orders:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Order'
-          "400":
-            description: Invalid parameter or employee without partner
-          "500":
-            description: Internal server error
-
-    /api/sales/{order_id}:
-      get:
-        tags: [ Sales Orders ]
-        summary: Get a specific Sales Order by ID
-        security:
-          - bearerAuth: [ ]
-        parameters:
-          - name: order_id
-            in: path
-            required: true
-            schema: { type: integer, example: 42 }
-            description: ID of the Sales Order
-        responses:
-          "200":
-            description: Successful retrieval of Sales Order
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    success: { type: boolean, example: true }
-                    order:
-                      $ref: '#/components/schemas/Order'
-          "404":
-            description: Sales Order not found
-          "500":
-            description: Internal server error
-
-    /api/purchase/{order_id}:
-      get:
-        tags: [ Purchase Orders ]
-        summary: Get a specific Purchase Order by ID
-        security:
-          - bearerAuth: [ ]
-        parameters:
-          - name: order_id
-            in: path
-            required: true
-            schema: { type: integer, example: 42 }
-            description: ID of the Purchase Order
-        responses:
-          "200":
-            description: Successful retrieval of Purchase Order
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    success: { type: boolean, example: true }
-                    order:
-                      $ref: '#/components/schemas/Order'
-          "404":
-            description: Purchase Order not found
-          "500":
-            description: Internal server error
-
-    /api/sales/create:
-      post:
-        tags: [ Sales Orders ]
-        summary: Create a new Sales Order
-        security:
-          - bearerAuth: [ ]
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  note:
-                    type: string
-                    example: "Please deliver before 5 PM"
-                  client_order_ref:
-                    type: string
-                    example: "Customer Reference #123"
-                  order_lines:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/OrderLine'
-        responses:
-          "201":
-            description: Sales Order created successfully
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    success: { type: boolean, example: true }
-                    order:
-                      $ref: '#/components/schemas/Order'
-          "400":
-            description: Invalid input or missing required fields
-          "404":
-            description: Product or Unit of Measure not found
-          "500":
-            description: Internal server error
