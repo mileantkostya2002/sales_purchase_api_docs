@@ -1,41 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Odoo Mobile API Docs</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui.css" />
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #swagger-ui {
-      width: 100%;
-      height: 100vh;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odoo API Documentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.5/swagger-ui.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .header p {
+            margin: 0.5rem 0 0 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .swagger-ui .topbar {
+            display: none;
+        }
+        
+        .info-banner {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            margin: 2rem;
+            border-radius: 4px;
+        }
+        
+        .info-banner h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        
+        .info-banner code {
+            background: #e9ecef;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: "Courier New", monospace;
+            color: #d63384;
+        }
+        
+        #swagger-ui {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .info-banner {
+                margin: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div id="swagger-ui"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui-bundle.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui-standalone-preset.js"></script>
-  <script>
-    window.onload = function() {
-      const ui = SwaggerUIBundle({
-        url: "openapi.yaml",  // <-- Replace with your YAML file name
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
-        ],
-        layout: "StandaloneLayout",
-        docExpansion: "none",
-        defaultModelsExpandDepth: -1
-      });
-      window.ui = ui;
-    };
-  </script>
+    <div class="header">
+        <h1>🚀 Odoo Sales & Purchase API</h1>
+        <p>Complete API documentation for managing orders in Odoo</p>
+    </div>
+    
+    <div class="info-banner">
+        <h3>🔐 Authentication</h3>
+        <p>All API endpoints require authentication using a Bearer token:</p>
+        <p><code>Authorization: Bearer YOUR_API_TOKEN</code></p>
+        <br>
+        <p>Click on the <strong>"Authorize"</strong> button below to enter your API token once, and it will be used for all requests.</p>
+    </div>
+    
+    <div id="swagger-ui"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.5/swagger-ui-bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.5/swagger-ui-standalone-preset.min.js"></script>
+    <script>
+        window.onload = function() {
+            window.ui = SwaggerUIBundle({
+                url: "openapi.yaml",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                defaultModelsExpandDepth: 1,
+                defaultModelExpandDepth: 1,
+                docExpansion: "list",
+                filter: true,
+                tryItOutEnabled: true,
+                persistAuthorization: true
+            });
+        };
+    </script>
 </body>
 </html>
